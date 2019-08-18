@@ -12,7 +12,7 @@ mongoose.connect('mongodb://localhost:27017/extreme_mean_db', { useNewUrlParser:
     .then(() => {
         console.log("Connection to the database was successfully!!!");
 
-        // Create the server
+        // Create the service with the specified port
         app.listen(port, () => {
             console.log("Service is running on port " + port);
         })
