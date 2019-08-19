@@ -3,14 +3,15 @@
 var bcrypt = require('bcrypt-nodejs');
 
 var User = require('../models/user');
+var jwt = require('../services/jwt');
 
-function home (req, res) {
+function home(req, res) {
     res.status(200).send({
         message: 'Hello world from NodeJs!!!'
     });
 };
 
-function test (req, res) {
+function test(req, res) {
     res.status(200).send({
         message: 'Test action in the server...'
     });
@@ -18,7 +19,7 @@ function test (req, res) {
 
 function saveUser(req, res) {
     var parameters = req.body;
-    
+
     var user = new User();
     if (parameters.email) {
         user.name = parameters.name;
@@ -27,30 +28,32 @@ function saveUser(req, res) {
         user.email = parameters.email;
         user.role = 'ROLE_USER';
 
-        User.find({ $or: [
-            {email: user.email.toLowerCase()},
-            {nick: user.nickName.toLowerCase()}
-        ]}).exec((err, users) => {
-            if(err) return res.status(500).send({message: 'Error getting users.'});
+        User.find({
+            $or: [
+                { email: user.email.toLowerCase() },
+                { nick: user.nickName.toLowerCase() }
+            ]
+        }).exec((err, users) => {
+            if (err) return res.status(500).send({ message: 'Error getting users.' });
 
-            if(users && users.length > 0) {
-                return res.status(400).send({message: 'Error - User already exist!'});
+            if (users && users.length > 0) {
+                return res.status(400).send({ message: 'Error - User already exist!' });
             } else {
                 bcrypt.hash(parameters.password, null, null, (err, hash) => {
                     user.password = hash;
-        
+
                     user.save((err, usr) => {
-                        if(err) return res.status(500).send({message: 'Something went wrong, the user could not be saved.'});
-        
+                        if (err) return res.status(500).send({ message: 'Something went wrong, the user could not be saved.' });
+
                         if (usr) {
-                            res.status(200).send({user: usr});
+                            res.status(200).send({ user: usr });
                         } else {
-                            res.status(500).send({message: 'User could not be registered.'});
+                            res.status(500).send({ message: 'User could not be registered.' });
                         }
                     })
                 });
             }
-        })        
+        })
     } else {
         res.status(400).send({
             message: 'Some required fields are missing!'
@@ -64,19 +67,26 @@ function login(req, res) {
     var email = params.email;
     var password = params.password;
 
-    User.findOne({email: email}, (err, user) => {
-        if(err) return res.status(500).send({message: 'Request error when login.'});
+    User.findOne({ email: email }, (err, user) => {
+        if (err) return res.status(500).send({ message: 'Request error when login.' });
 
-        if(user) {
+        if (user) {
             bcrypt.compare(password, user.password, (err, check) => {
-                if(check) {
-                    return res.status(200).send({user});
+                if (check) {
+                    if (params.getToken) {
+                        return res.status(200).send({
+                            token: jwt.createToken(user)
+                        });
+                    } else {
+                        user.password = undefined;
+                        return res.status(200).send({ user });
+                    }
                 } else {
-                    return res.status(500).send({message: 'Request error when login.'});
+                    return res.status(500).send({ message: 'Request error when login.' });
                 }
             });
         } else {
-            return res.status(500).send({message: 'Request error when login.'});
+            return res.status(500).send({ message: 'Request error when login.' });
         }
     });
 }
