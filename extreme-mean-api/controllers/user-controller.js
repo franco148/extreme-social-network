@@ -1,6 +1,7 @@
 'use strict'
 
 var bcrypt = require('bcrypt-nodejs');
+var mongoosePaginate = require('mongoose-pagination');
 
 var User = require('../models/user');
 var jwt = require('../services/jwt');
@@ -102,10 +103,33 @@ function getUser(req, res) {
     });
 }
 
+function getUsers(req, res) {
+    var loggedUserId = req.user.sub;
+
+    var page = 1;
+    if (req.params.page) {
+        page = req.params.page;
+    }
+
+    var itemPerPage = 5;
+    console.log('XXXXXXXXXXXXXXXXXXXXX');
+    User.find().sort('_id').paginate(page, itemPerPage, (err, users, total) => {
+        if (err) return res.status(500).send({ message: 'Error getting user.' });
+        if (!users) return res.status(404).send({ message: 'There are not registered users.' });
+
+        return res.status(200).send({
+            users,
+            total,
+            pages: Math.ceil(total / itemPerPage)
+        });
+    });
+}
+
 module.exports = {
     home,
     test,
     saveUser,
     login,
-    getUser
+    getUser,
+    getUsers
 }
